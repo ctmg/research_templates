@@ -17,28 +17,6 @@ pd.set_option('notebook_repr_html', False)
 
 import drawdown as dd
 
-"""DATA"""
-
-
-#'''Equity model study as an example'''
-#equities = pd.read_csv('testdata_GemConsensusVsFMEquityIndices.csv', index_col=0, parse_dates=True)
-
-'''CTA Index for correlation and beta - automate getting the data - is it in the WAB?
-        http://www.newedge.com/content/newedgecom/en/home.html
-            *the file requires addition of header, changing from percentage to number in excel'''
-necta = pd.read_csv('Newedge_CTA_Index_historical_data.csv', index_col=0, header=None, parse_dates=True)['2004':]
-necta.columns = ['ROR', 'M', 'A']; necta.index.name = 'Date'
-necta.ix[:2] = 0
-
-'''PQA data for testing
-pqa = pd.read_csv('PQARoR_080114.csv', index_col=0, parse_dates=True)
-pqa_m = pqa.resample('BM', how='sum')
-pqa_q = pqa.resample('BQ-DEC', how='sum')
-pqa_y = pqa.resample('BA-DEC', how='sum')
-'''
-
-
-
 
 """FUNCTIONS"""
 
@@ -59,7 +37,7 @@ def semistandard_dist(df):
     return neg_moments.ix[['vol','skew','kurt']]
 
 
-def ratios(df, bench=necta['ROR']):
+def ratios(df, bench):
     #sharpe ratio
     ret = df.mean()
     vol = df.std()
@@ -82,12 +60,12 @@ def ratios(df, bench=necta['ROR']):
 
 
 
-def regression(df, bench=necta['ROR']):
+def regression(df, bench):
     return df.apply(lambda x: (pd.ols(y=x, x=bench).summary_as_matrix.x))
     
     
 
-def correlations(df, bench=necta['ROR']):
+def correlations(df, bench):
     c = df.corrwith(bench)
     return c
 
@@ -123,37 +101,51 @@ def return_index(ret):
     return vami   
 
 
+def get_px():
+    getTicker = raw_input("Provide mutual fund tickers seperated by commas (no error catching here so be exact!): ").split(",")
+    cleanTickers = [x.strip() for x in getTicker]
+    print cleanTickers
+    px = DataFrame({n: web.get_data_yahoo(n, start='1980-01-01')['Adj Close'].pct_change() for n in cleanTickers}).dropna()
+    return px
 
-
-
-def main(ror_file='PQARoR_080114.csv', c=.99):
-        
-    data = pd.read_csv(ror_file, index_col=0, parse_dates=True)
-    #necta = pd.read_csv('Newedge_CTA_Index_historical_data.csv', index_col=0, header=1, parse_dates=True)['2004':]
-    ret_index = data.apply(return_index)
+def get_bench():
+    getTicker = raw_input("Provide mutual fund or index ticker to be used as benchmark (^gspc is sp500): ").split(",")
+    cleanTicker = [x.strip() for x in getTicker]
+    print "Benchmark is: ", cleanTicker
+    px = web.get_data_yahoo(cleanTicker, start='1980-01-01')['Adj Close'].pct_change().dropna()
+    return px
     
-    distribution = moments(data)
+    
+def main(c=.99):
+    
+    data = get_px()
+    bench = get_bench()
+    dataBench = pd.concat([data, bench])
+    benchSeries = bench.ix[:,0]
+    
+    distribution = moments(dataBench)
     print "\n The distribution looks like: \n"    
-    print (distribution)
+    print distribution
     print "\n The downside risk from all neg returns: \n" 
-    print semistandard_dist(data)
+    print semistandard_dist(dataBench)
     print "\n Ratio analysis: \n" 
-    print ratios(data)
+    print ratios(data, benchSeries)
     print "\n One day VaR at the %.2f conf. level is: \n" % c
-    print data.apply(quant_var, args= (c,))
+    print dataBench.apply(quant_var, args= (c,))
     print "\n One day loss beyond VaR (CVaR) at the %.2f conf. level is: \n" % c
-    print data.apply(quant_cvar, args= (c,))
-    print "\n Correlation against NECTA: \n" 
-    print correlations(data)
-    print "\n Regression against NECTA: \n" 
-    print regression(data)
-    print "\n Top ten drawdowns: \n"
+    print dataBench.apply(quant_cvar, args= (c,))
+    print "\n Correlation against benchmark: \n" 
+    print correlations(data, benchSeries)
+    print "\n Regression against benchmark: \n" 
+    print regression(data, benchSeries)
     data1 = data.ix[:,0]
+    print "\n Top ten drawdowns from: " + data1.name + "\n"
+    
     dd_index = dd.drawdowns(data1)
     drawdowns = dd.all_dd(dd_index)
     print dd.max_dd(drawdowns)
     dd.dd_plot(drawdowns)
-    dd.max_dd(dd, n=10).to_csv('test_dd.csv')
+    dd.max_dd(drawdowns, n=10).to_csv('test_dd.csv')
     
     
 if __name__ == '__main__':

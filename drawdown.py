@@ -105,7 +105,7 @@ def dd_plot(df):
     dd = df['dd'].fillna(0)
     fig, axes = plt.subplots(2,1)
     df['vami'].plot(ax=axes[0], title='Return Index')
-    dd.plot(ylim=[-.25,0], ax=axes[1], title='Drawdown')
+    dd.plot(ylim=(dd.min()-.1, 0), ax=axes[1], title='Drawdown')
 
 
 
