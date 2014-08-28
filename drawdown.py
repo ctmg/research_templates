@@ -16,28 +16,6 @@ import math
 pd.set_option('notebook_repr_html', False)
 
 
-"""DATA"""
-
-
-
-'''CTA Index for correlation and beta - automate getting the data - is it in the WAB?
-        http://www.newedge.com/content/newedgecom/en/home.html
-            *the file requires addition of header, changing from percentage to number in excel'''
-#necta = pd.read_csv('Newedge_CTA_Index_historical_data.csv', index_col=0, header=None, parse_dates=True)['2004':]
-#necta.columns = ['ROR', 'M', 'A']; necta.index.name = 'Date'
-#necta.ix[:2] = 0
-
-'''PQA data for testing'''
-pqa = pd.read_csv('PQARoR_080114.csv', index_col=0, parse_dates=True)
-'''
-pqa_m = pqa.resample('BM', how='sum')
-pqa_q = pqa.resample('BQ-DEC', how='sum')
-pqa_y = pqa.resample('BA-DEC', how='sum')
-'''
-
-#ADD IN PARAMETER TO CHANGE FOR COMPOUNDING
-
-
 """FUNCTIONS"""
 
  
@@ -63,8 +41,7 @@ def drawdowns(ror):
 
 
 def all_dd(df):
-    #used to only get single column 
-    # change to integer indexing
+    
     df.reset_index(level=0, inplace=True)
     df['start'] = pd.NaT; df['end'] = pd.NaT;  df['valley'] = pd.NaT; df['length_of_dd'] = np.nan; df['dd'] = np.nan; df['max_dd'] = np.nan
 
