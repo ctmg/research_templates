@@ -101,27 +101,57 @@ def return_index(ret):
     return vami   
 
 
-def get_px():
+'''DATA'''
+
+
+def get_px(rorStyle=0):
     getTicker = raw_input("Provide mutual fund tickers seperated by commas (no error catching here so be exact!): ").split(",")
     cleanTickers = [x.strip() for x in getTicker]
     print cleanTickers
-    px = DataFrame({n: web.get_data_yahoo(n, start='1980-01-01')['Adj Close'].pct_change() for n in cleanTickers}).dropna()
+    if rorStyle == 0:
+        px = DataFrame({n: web.get_data_yahoo(n, start='1980-01-01')['Adj Close'].pct_change() for n in cleanTickers}).dropna()
+    elif rorStyle == 1:
+        px = np.log(DataFrame({n: web.get_data_yahoo(n, start='1980-01-01')['Adj Close'].pct_change() for n in cleanTickers}).dropna() + 1)
     return px
 
-def get_bench():
+def get_bench(rorStyle=0):
     getTicker = raw_input("Provide mutual fund or index ticker to be used as benchmark (^gspc is sp500): ").split(",")
     cleanTicker = [x.strip() for x in getTicker]
     print "Benchmark is: ", cleanTicker
-    px = web.get_data_yahoo(cleanTicker, start='1980-01-01')['Adj Close'].pct_change().dropna()
-    return px
-    
+    if rorStyle == 0:
+        ror = web.get_data_yahoo(cleanTicker, start='1980-01-01')['Adj Close'].pct_change().dropna()
+    elif rorStyle == 1:
+        px = web.get_data_yahoo(cleanTicker, start='1980-01-01')['Adj Close']
+        ror = np.log(px / px.shift(1))
+        
+    return ror
+
+
+def getRorStyle():
+    while True:
+        answer = raw_input("Do you want to compound ror's? (yes/no) ").lower()
+        try: 
+            answer in ['yes','y', 'no', 'n']
+        except:
+            print ("Try again, either yes/no or y/n")
+            
+        if (answer in ['yes','y']):
+            return 1
+        elif (answer in ['no', 'n']):
+            return 0
+                
+
+
+
     
 def main(c=.99):
-    
-    data = get_px()
-    bench = get_bench()
-    dataBench = pd.concat([data, bench])
+
+    retStyle = getRorStyle()
+    data = get_px(retStyle)
+    bench = get_bench(retStyle)
+    dataBench = data.join(bench)
     benchSeries = bench.ix[:,0]
+    dataBench.to_csv('test_ror.csv')    
     
     distribution = moments(dataBench)
     print "\n The distribution looks like: \n"    
@@ -138,15 +168,15 @@ def main(c=.99):
     print correlations(data, benchSeries)
     print "\n Regression against benchmark: \n" 
     print regression(data, benchSeries)
+    
     data1 = data.ix[:,0]
     print "\n Top ten drawdowns from: " + data1.name + "\n"
-    
     dd_index = dd.drawdowns(data1)
     drawdowns = dd.all_dd(dd_index)
     print dd.max_dd(drawdowns)
     dd.dd_plot(drawdowns)
     dd.max_dd(drawdowns, n=10).to_csv('test_dd.csv')
-    
+
     
 if __name__ == '__main__':
     main()

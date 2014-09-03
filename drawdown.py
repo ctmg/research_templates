@@ -19,24 +19,25 @@ pd.set_option('notebook_repr_html', False)
 """FUNCTIONS"""
 
  
-def return_index(ret):
+def return_index(ret, rorStyle):
     #use with apply
     ret.ix[0] = 1
-    #for compounding:
-    #ret = ret + 1
-    #vami = ret.cumprod() - 1
-    vami = ret.cumsum()
+    if rorStyle == 0:
+        vami = ret.cumsum()
+    elif rorStyle == 1:
+        vami = ret.cumsum().apply(np.exp)
     return vami 
 
     
-def drawdowns(ror):
+def drawdowns(ror, rorStyle=0):
     #use with apply
-    vami = return_index(ror)
+    vami = return_index(ror, rorStyle)
+    print vami.tail()
     peak = pd.expanding_max(vami)
     t = pd.concat([ror, vami, peak], axis=1); t.columns = ['ror','vami','peak']
     t['indd'] = t.apply(lambda x: 1 if (x['peak'] > x['vami']) else np.nan, axis=1)
-    #This is for compounded ror's
-    #f = t.apply(lambda x: ((x['vami'] / x['peak'])-1) if (x['peak'] > x['vami']) else np.nan, axis=1) 
+    #this is for compounding - needed?
+    #t['indd'] = t.apply(lambda x: ((x['vami'] / x['peak'])-1) if (x['peak'] > x['vami']) else np.nan, axis=1) 
     return t
 
 
@@ -52,7 +53,7 @@ def all_dd(df):
             df.ix[x,'start'] = df.ix[x, 'Date']
             
         if (test.notnull()[x-1] and test.isnull()[x]): 
-            s = df.ix[:x,'start'].last_valid_index()            
+            s = df.ix[:x,'start'].last_valid_index()  
             df.ix[s:x-1,'end'] = df.ix[x-1, 'Date']
             #find valley 
             v = df.ix[s:x-1,'vami'].idxmin()
@@ -61,6 +62,18 @@ def all_dd(df):
             #need to sum ror's here
             df.ix[s:x-1, 'dd'] = pd.expanding_sum(df.ix[s:x-1,'ror'])
             df.ix[x-1, 'max_dd'] = df.ix[s:v,'ror'].sum()
+        
+        if (x == len(df)-1 and test.notnull()[x]):
+            s = df.ix[:x,'start'].last_valid_index()
+            df.ix[s:x,'end'] = df.ix[x, 'Date']
+            #find valley 
+            v = df.ix[s:x,'vami'].idxmin()
+            df.ix[s:x, 'valley'] = df.ix[v,'Date']  
+            df.ix[x,'length_of_dd'] = len(df[s:x])+1
+            #need to sum ror's here
+            df.ix[s:x, 'dd'] = pd.expanding_sum(df.ix[s:x,'ror'])
+            df.ix[x, 'max_dd'] = df.ix[s:v,'ror'].sum()
+             
 
     #forward fill the start 
     df['start'] = df['start'][df['indd'].notnull()].fillna(method='ffill')
@@ -90,7 +103,7 @@ def main(ror_file='PQARoR_080114.csv', c=.99):
         
      data = pd.read_csv(ror_file, index_col=0, parse_dates=True)
      data1 = data.ix[:,0]
-     dd_index = drawdowns(data1)
+     dd_index = drawdowns(data1, rorStyle)
      dd = all_dd(dd_index)
      print max_dd(dd)
      return dd_plot(dd)
