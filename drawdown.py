@@ -21,7 +21,7 @@ pd.set_option('notebook_repr_html', False)
  
 def return_index(ret, rorStyle):
     #use with apply
-    ret.ix[0] = 1
+    #ret.ix[0] = 1 - not needed bc of np.exp?
     if rorStyle == 0:
         vami = ret.cumsum()
     elif rorStyle == 1:

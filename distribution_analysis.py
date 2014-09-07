@@ -22,12 +22,11 @@ import drawdown as dd
 
 
 def moments(df):
-    ret = df.mean()
     vol = df.std() 
     skew = df.skew()
     excess_kurt = df.kurt() #already is excess
-    dist = DataFrame({'ret':ret, 'vol':vol*math.sqrt(260), 'skew':skew, 'kurt':excess_kurt},
-                     columns=['ret','vol', 'skew', 'kurt'])
+    dist = DataFrame({'vol':vol*math.sqrt(260), 'skew':skew, 'kurt':excess_kurt},
+                     columns=['vol', 'skew', 'kurt'])
     return dist.T
 
 
@@ -147,7 +146,8 @@ def getRorStyle():
 def main(c=.99):
 
     retStyle = getRorStyle()
-    data = get_px(retStyle)
+    #double check the math on portfolio ror
+    data = get_px(retStyle); data['portfolio'] = data.sum(axis=1)/len(data.columns)
     bench = get_bench(retStyle)
     dataBench = data.join(bench)
     benchSeries = bench.ix[:,0]
@@ -169,7 +169,8 @@ def main(c=.99):
     print "\n Regression against benchmark: \n" 
     print regression(data, benchSeries)
     
-    data1 = data.ix[:,0]
+    data1 = data['portfolio']
+     
     print "\n Top ten drawdowns from: " + data1.name + "\n"
     dd_index = dd.drawdowns(data1)
     drawdowns = dd.all_dd(dd_index)
