@@ -60,7 +60,7 @@ def all_dd(df):
             df.ix[x-1,'length_of_dd'] = len(df[s:x-1])+1
             #need to sum ror's here
             df.ix[s:x-1, 'dd'] = pd.expanding_sum(df.ix[s:x-1,'ror'])
-            df.ix[x-1, 'max_dd'] = df.ix[s:v,'ror'].sum()
+            df.ix[x-1, 'max_dd'] = np.exp(df.ix[s:v,'ror'].sum())
         
         if (x == len(df)-1 and test.notnull()[x]):
             s = df.ix[:x,'start'].last_valid_index()
@@ -71,7 +71,7 @@ def all_dd(df):
             df.ix[x,'length_of_dd'] = len(df[s:x])+1
             #need to sum ror's here
             df.ix[s:x, 'dd'] = pd.expanding_sum(df.ix[s:x,'ror'])
-            df.ix[x, 'max_dd'] = df.ix[s:v,'ror'].sum()
+            df.ix[x, 'max_dd'] = np.exp(df.ix[s:v,'ror'].sum())
              
 
     #forward fill the start 
