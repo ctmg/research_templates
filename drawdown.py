@@ -32,7 +32,6 @@ def return_index(ret, rorStyle):
 def drawdowns(ror, rorStyle=0):
     #use with apply
     vami = return_index(ror, rorStyle)
-    print vami.tail()
     peak = pd.expanding_max(vami)
     t = pd.concat([ror, vami, peak], axis=1); t.columns = ['ror','vami','peak']
     t['indd'] = t.apply(lambda x: 1 if (x['peak'] > x['vami']) else np.nan, axis=1)
